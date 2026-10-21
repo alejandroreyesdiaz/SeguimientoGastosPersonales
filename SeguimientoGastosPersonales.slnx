@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SeguimientoGastosPersonales.Api/SeguimientoGastosPersonales.Api.csproj" Id="436e7e86-404b-48a5-93b9-5cb10087777b" />
+  <Project Path="SeguimientoGastosPersonales.Core/SeguimientoGastosPersonales.Core.csproj" Id="8e415c2c-2d82-4917-a83c-c44ffc76247a" />
+  <Project Path="SeguimientoGastosPersonales.Infraestructure/SeguimientoGastosPersonales.Infraestructure.csproj" Id="9fd82422-651c-403a-863a-c74007d13956" />
+  <Project Path="SeguimientoGastosPersonales.Services/SeguimientoGastosPersonales.Services.csproj" Id="a20f266d-51b3-4647-842e-edb116b0f68e" />
+</Solution>

@@ -1,0 +1,20 @@
+
+# Archivos generados por Visual Studio y .NET
+.vs/
+**/bin/
+**/obj/
+**/Debug/
+**/Release/
+*.user
+*.suo
+*.cache
+
+# Archivos locales y secretos
+.env
+.env.*
+!.env.example
+secrets.json
+
+# Archivos del sistema
+Thumbs.db
+Desktop.ini
