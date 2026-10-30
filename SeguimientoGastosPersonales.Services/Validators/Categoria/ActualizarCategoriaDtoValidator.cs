@@ -1,5 +1,4 @@
-﻿
-using FluentValidation;
+﻿using FluentValidation;
 using SeguimientoGastosPersonales.Core.DTOs;
 
 namespace SeguimientoGastosPersonales.Services.Validators
@@ -10,17 +9,19 @@ namespace SeguimientoGastosPersonales.Services.Validators
         public ActualizarCategoriaDtoValidator()
         {
             RuleFor(x => x.Nombre)
-                .NotEmpty()
-                .WithMessage("El nombre es obligatorio.")
+            .NotEmpty()
+            .WithMessage("El nombre de la categoría es obligatorio.")
+            .MaximumLength(100)
+            .WithMessage("El nombre no puede superar los 100 caracteres.");
+
+            RuleFor(x => x.Nombre)
                 .MaximumLength(100)
-                .WithMessage(
-                    "El nombre no puede superar los 100 caracteres.");
+                .WithMessage("El nombre no puede superar los 100 caracteres.");
 
             RuleFor(x => x.Tipo)
                 .Must(tipo =>
                     tipo == "INGRESO" || tipo == "GASTO")
-                .WithMessage(
-                    "El tipo debe ser INGRESO o GASTO.");
+                .WithMessage("El tipo debe ser INGRESO o GASTO.");
         }
     }
 }

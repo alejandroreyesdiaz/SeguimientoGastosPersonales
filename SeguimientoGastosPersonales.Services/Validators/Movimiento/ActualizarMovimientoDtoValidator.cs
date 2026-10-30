@@ -1,5 +1,4 @@
-﻿
-using FluentValidation;
+﻿using FluentValidation;
 using SeguimientoGastosPersonales.Core.DTOs;
 
 namespace SeguimientoGastosPersonales.Services.Validators
@@ -9,6 +8,10 @@ namespace SeguimientoGastosPersonales.Services.Validators
     {
         public ActualizarMovimientoDtoValidator()
         {
+            RuleFor(x => x.Id)
+                .GreaterThan(0)
+                .WithMessage("El ID del movimiento debe ser mayor que cero.");
+
             RuleFor(x => x.UsuarioId)
                 .GreaterThan(0)
                 .WithMessage("El usuario es obligatorio.");

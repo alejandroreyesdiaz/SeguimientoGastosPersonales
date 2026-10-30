@@ -13,6 +13,7 @@ namespace SeguimientoGastosPersonales.Infrastructure.Mappings
         {
             CreateMap<Usuario, UsuarioDto>();
             CreateMap<UsuarioDto, Usuario>();
+            CreateMap<CrearUsuarioDto, Usuario>();
         }
     }
 }

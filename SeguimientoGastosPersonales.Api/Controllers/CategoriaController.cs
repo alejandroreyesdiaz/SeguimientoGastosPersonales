@@ -1,83 +1,68 @@
 ﻿
-using FluentValidation;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using SeguimientoGastosPersonales.Api.Response;
 using SeguimientoGastosPersonales.Core.DTOs;
+using SeguimientoGastosPersonales.Core.Entities;
+using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Services.Interfaces;
+using SeguimientoGastosPersonales.Services.Validators;
 
 namespace SeguimientoGastosPersonales.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class CategoriaController : ControllerBase
     {
         private readonly ICategoriaService _categoriaService;
-        private readonly IValidator<CrearCategoriaDto> _crearValidator;
-        private readonly IValidator<ActualizarCategoriaDto> _actualizarValidator;
+        private readonly IMapper _mapper;
+        private readonly CrearCategoriaDtoValidator _crearValidator;
+        private readonly ActualizarCategoriaDtoValidator _actualizarValidator;
 
         public CategoriaController(
+            IMapper mapper,
             ICategoriaService categoriaService,
-            IValidator<CrearCategoriaDto> crearValidator,
-            IValidator<ActualizarCategoriaDto> actualizarValidator)
+            CrearCategoriaDtoValidator crearValidator,
+            ActualizarCategoriaDtoValidator actualizarValidator)
         {
+            _mapper = mapper;
             _categoriaService = categoriaService;
             _crearValidator = crearValidator;
             _actualizarValidator = actualizarValidator;
         }
 
-        // GET: api/Categoria
+     
         [HttpGet]
         public async Task<IActionResult> GetAllCategorias()
         {
-            try
-            {
-                var categorias =
-                    await _categoriaService.GetAllCategoriasAsync();
+            var categorias = await _categoriaService.GetAllCategoriasAsync();
 
-                return Ok(categorias);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener las categorías.",
-                    error = ex.Message
-                });
-            }
+            var categoriaDto =
+                _mapper.Map<IEnumerable<CategoriaDto>>(categorias);
+
+            var response =
+                new ApiResponse<IEnumerable<CategoriaDto>>(categoriaDto);
+
+            return Ok(response);
         }
 
-        // GET: api/Categoria/5
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetCategoriaById(int id)
         {
-            try
-            {
-                var categoria =
-                    await _categoriaService.GetCategoriaByIdAsync(id);
+            var categoria = await _categoriaService.GetCategoriaByIdAsync(id);
 
-                if (categoria == null)
+            if (categoria == null)
+                return NotFound(new
                 {
-                    return NotFound(new
-                    {
-                        message = "No se encontró la categoría."
-                    });
-                }
-
-                return Ok(categoria);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener la categoría.",
-                    error = ex.Message
+                    message = "No se encontró la categoría."
                 });
-            }
-        }
 
+            var categoriaDto = _mapper.Map<CategoriaDto>(categoria);
+
+            var response = new ApiResponse<CategoriaDto>(categoriaDto);
+
+            return Ok(response);
+        }
         // POST: api/Categoria
         [HttpPost]
         public async Task<IActionResult> CrearCategoria(
@@ -88,34 +73,31 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             if (!validationResult.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Error de validación",
-                    errors = validationResult.Errors.Select(e => new
+                throw new BusinessException(
+                    message: "Error de validación",
+                    details: validationResult.Errors.Select(e => new
                     {
                         field = e.PropertyName,
                         error = e.ErrorMessage
-                    })
-                });
+                    }));
             }
 
             try
             {
-                var categoria =
-                    await _categoriaService.CrearCategoriaAsync(categoriaDto);
+                var categoria = _mapper.Map<Categoria>(categoriaDto);
+
+                await _categoriaService.CrearCategoriaAsync(categoria);
+
+                var resultDto = _mapper.Map<CategoriaDto>(categoria);
 
                 return CreatedAtAction(
                     nameof(GetCategoriaById),
                     new { id = categoria.Id },
-                    categoria);
+                    resultDto);
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -127,12 +109,19 @@ namespace SeguimientoGastosPersonales.API.Controllers
             }
         }
 
-        // PUT: api/Categoria/5
         [HttpPut("{id:int}")]
         public async Task<IActionResult> ActualizarCategoria(
             int id,
             [FromBody] ActualizarCategoriaDto categoriaDto)
         {
+            if (id != categoriaDto.Id)
+            {
+                return BadRequest(new
+                {
+                    message = "El ID de la categoría no coincide con el de la ruta."
+                });
+            }
+
             var validationResult =
                 await _actualizarValidator.ValidateAsync(categoriaDto);
 
@@ -151,30 +140,24 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             try
             {
+                var categoria = _mapper.Map<Categoria>(categoriaDto);
+
                 var actualizado =
-                    await _categoriaService.ActualizarCategoriaAsync(
-                        id, categoriaDto);
+                    await _categoriaService.ActualizarCategoriaAsync(id, categoria);
 
                 if (!actualizado)
-                {
                     return NotFound(new
                     {
                         message = "No se encontró la categoría."
                     });
-                }
 
-                return Ok(new
-                {
-                    message = "Categoría actualizada correctamente."
-                });
+                var resultDto = _mapper.Map<CategoriaDto>(categoria);
+
+                return Ok(new ApiResponse<CategoriaDto>(resultDto));
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -191,35 +174,29 @@ namespace SeguimientoGastosPersonales.API.Controllers
         public async Task<IActionResult> EliminarCategoria(int id)
         {
             if (id <= 0)
-            {
                 return BadRequest(new
                 {
                     message = "El ID debe ser mayor que cero."
                 });
-            }
+
+            var categoria =
+                await _categoriaService.GetCategoriaByIdAsync(id);
+
+            if (categoria == null)
+                return NotFound(new
+                {
+                    message = "No se encontró la categoría."
+                });
 
             try
             {
-                var eliminado =
-                    await _categoriaService.EliminarCategoriaAsync(id);
-
-                if (!eliminado)
-                {
-                    return NotFound(new
-                    {
-                        message = "No se encontró la categoría."
-                    });
-                }
+                await _categoriaService.EliminarCategoriaAsync(id);
 
                 return NoContent();
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {

@@ -1,24 +1,31 @@
 ﻿
-using FluentValidation;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using SeguimientoGastosPersonales.Api.Response;
 using SeguimientoGastosPersonales.Core.DTOs;
+using SeguimientoGastosPersonales.Core.Entities;
+using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Services.Interfaces;
+using SeguimientoGastosPersonales.Services.Validators;
 
 namespace SeguimientoGastosPersonales.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _usuarioService;
-        private readonly IValidator<CrearUsuarioDto> _crearValidator;
-        private readonly IValidator<UsuarioDto> _actualizarValidator;
+        private readonly IMapper _mapper;
+        private readonly CrearUsuarioDtoValidator _crearValidator;
+        private readonly ActualizarUsuarioDtoValidator _actualizarValidator;
 
         public UsuarioController(
+            IMapper mapper,
             IUsuarioService usuarioService,
-            IValidator<CrearUsuarioDto> crearValidator,
-            IValidator<UsuarioDto> actualizarValidator)
+            CrearUsuarioDtoValidator crearValidator,
+            ActualizarUsuarioDtoValidator actualizarValidator)
         {
+            _mapper = mapper;
             _usuarioService = usuarioService;
             _crearValidator = crearValidator;
             _actualizarValidator = actualizarValidator;
@@ -28,52 +35,34 @@ namespace SeguimientoGastosPersonales.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAllUsuarios()
         {
-            try
-            {
-                var usuarios = await _usuarioService.GetAllUsuariosAsync();
-                return Ok(usuarios);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener los usuarios.",
-                    error = ex.Message
-                });
-            }
+            var usuarios = await _usuarioService.GetAllUsuariosAsync();
+
+            var usuarioDto = _mapper.Map<IEnumerable<UsuarioDto>>(usuarios);
+
+            var response = new ApiResponse<IEnumerable<UsuarioDto>>(usuarioDto);
+
+            return Ok(response);
         }
 
-        // GET: api/Usuario/5
+        //get
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetUsuarioById(int id)
         {
-            try
-            {
-                var usuario = await _usuarioService.GetUsuarioByIdAsync(id);
+            var usuario = await _usuarioService.GetUsuarioByIdAsync(id);
 
-                if (usuario == null)
+            if (usuario == null)
+                return NotFound(new
                 {
-                    return NotFound(new
-                    {
-                        message = "No se encontró el usuario."
-                    });
-                }
-
-                return Ok(usuario);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener el usuario.",
-                    error = ex.Message
+                    message = "No se encontró el usuario."
                 });
-            }
+
+            var usuarioDto = _mapper.Map<UsuarioDto>(usuario);
+
+            var response = new ApiResponse<UsuarioDto>(usuarioDto);
+
+            return Ok(response);
         }
+
 
         // POST: api/Usuario
         [HttpPost]
@@ -85,34 +74,34 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             if (!validationResult.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Error de validación",
-                    errors = validationResult.Errors.Select(e => new
+                throw new BusinessException(
+                    message: "Error de validación",
+                    details: validationResult.Errors.Select(e => new
                     {
                         field = e.PropertyName,
                         error = e.ErrorMessage
-                    })
-                });
+                    }));
             }
 
             try
             {
-                var usuario =
-                    await _usuarioService.CrearUsuarioAsync(usuarioDto);
+                var usuario = _mapper.Map<Usuario>(usuarioDto);
+
+                // Se asigna la contraseña para que el servicio genere su hash.
+                usuario.PasswordHash = usuarioDto.Password;
+
+                await _usuarioService.CrearUsuarioAsync(usuario);
+
+                var resultDto = _mapper.Map<UsuarioDto>(usuario);
 
                 return CreatedAtAction(
                     nameof(GetUsuarioById),
                     new { id = usuario.Id },
-                    usuario);
+                    resultDto);
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -156,30 +145,24 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             try
             {
+                var usuario = _mapper.Map<Usuario>(usuarioDto);
+
                 var actualizado =
-                    await _usuarioService.ActualizarUsuarioAsync(
-                        id, usuarioDto);
+                    await _usuarioService.ActualizarUsuarioAsync(id, usuario);
 
                 if (!actualizado)
-                {
                     return NotFound(new
                     {
                         message = "No se encontró el usuario."
                     });
-                }
 
-                return Ok(new
-                {
-                    message = "Usuario actualizado correctamente."
-                });
+                var resultDto = _mapper.Map<UsuarioDto>(usuario);
+
+                return Ok(new ApiResponse<UsuarioDto>(resultDto));
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -196,35 +179,28 @@ namespace SeguimientoGastosPersonales.API.Controllers
         public async Task<IActionResult> EliminarUsuario(int id)
         {
             if (id <= 0)
-            {
                 return BadRequest(new
                 {
                     message = "El ID debe ser mayor que cero."
                 });
-            }
+
+            var usuario = await _usuarioService.GetUsuarioByIdAsync(id);
+
+            if (usuario == null)
+                return NotFound(new
+                {
+                    message = "No se encontró el usuario."
+                });
 
             try
             {
-                var eliminado =
-                    await _usuarioService.EliminarUsuarioAsync(id);
-
-                if (!eliminado)
-                {
-                    return NotFound(new
-                    {
-                        message = "No se encontró el usuario."
-                    });
-                }
+                await _usuarioService.EliminarUsuarioAsync(id);
 
                 return NoContent();
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {

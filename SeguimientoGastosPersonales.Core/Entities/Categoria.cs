@@ -4,9 +4,9 @@ using System.Text;
 
 namespace SeguimientoGastosPersonales.Core.Entities;
 
-public partial class Categoria
+public partial class Categoria: BaseEntity
 {
-    public int Id { get; set; }
+    //public int Id { get; set; }
     public string Nombre { get; set; } = null!;
     public string Tipo { get; set; } = null!;
     public virtual ICollection<Movimiento> Movimientos { get; set; } = new List<Movimiento>();

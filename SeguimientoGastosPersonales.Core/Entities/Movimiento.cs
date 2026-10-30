@@ -4,9 +4,9 @@ using System.Text;
 
 namespace SeguimientoGastosPersonales.Core.Entities;
 
-public partial class Movimiento
+public partial class Movimiento : BaseEntity
 {
-    public int Id { get; set; }
+   // public int Id { get; set; }
     public int UsuarioId { get; set; }
     public int CategoriaId { get; set; }
     public string Tipo { get; set; } = null!;

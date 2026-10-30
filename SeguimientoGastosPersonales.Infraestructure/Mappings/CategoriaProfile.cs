@@ -12,7 +12,12 @@ namespace SeguimientoGastosPersonales.Infrastructure.Mappings
         public CategoriaProfile()
         {
             CreateMap<Categoria, CategoriaDto>();
+
             CreateMap<CategoriaDto, Categoria>();
+
+            CreateMap<CrearCategoriaDto, Categoria>();
+
+            CreateMap<ActualizarCategoriaDto, Categoria>();
         }
     }
 }

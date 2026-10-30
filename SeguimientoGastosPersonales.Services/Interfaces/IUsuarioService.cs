@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using SeguimientoGastosPersonales.Core.DTOs;
+﻿using SeguimientoGastosPersonales.Core.Entities;
 
 namespace SeguimientoGastosPersonales.Services.Interfaces
 {
     public interface IUsuarioService
     {
-        Task<IEnumerable<UsuarioDto>> GetAllUsuariosAsync();
-        Task<UsuarioDto?> GetUsuarioByIdAsync(int id);
-        Task<UsuarioDto> CrearUsuarioAsync(CrearUsuarioDto dto);
-        Task<bool> ActualizarUsuarioAsync(int id, UsuarioDto dto);
+        Task<IEnumerable<Usuario>> GetAllUsuariosAsync();
+        Task<Usuario?> GetUsuarioByIdAsync(int id);
+        Task<Usuario> CrearUsuarioAsync(Usuario usuario);
+        Task<bool> ActualizarUsuarioAsync(int id, Usuario usuario);
         Task<bool> EliminarUsuarioAsync(int id);
     }
 }

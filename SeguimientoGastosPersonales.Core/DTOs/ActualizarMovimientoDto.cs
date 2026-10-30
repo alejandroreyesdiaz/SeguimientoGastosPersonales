@@ -6,6 +6,7 @@ namespace SeguimientoGastosPersonales.Core.DTOs
 {
     public class ActualizarMovimientoDto
     {
+        public int Id { get; set; }
         public int UsuarioId { get; set; }
         public int CategoriaId { get; set; }
         public string Tipo { get; set; } = null!;

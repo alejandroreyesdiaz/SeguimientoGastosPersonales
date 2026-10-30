@@ -12,7 +12,14 @@ namespace SeguimientoGastosPersonales.Infrastructure.Mappings
         public MovimientoProfile()
         {
             CreateMap<Movimiento, MovimientoDto>();
+
             CreateMap<MovimientoDto, Movimiento>();
+
+            CreateMap<CrearGastoDto, Movimiento>();
+
+            CreateMap<CrearIngresoDto, Movimiento>();
+
+            CreateMap<ActualizarMovimientoDto, Movimiento>();
         }
     }
 }

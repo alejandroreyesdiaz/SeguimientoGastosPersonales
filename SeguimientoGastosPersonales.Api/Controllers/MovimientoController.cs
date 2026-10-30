@@ -1,84 +1,77 @@
 ﻿
-using FluentValidation;
+using AutoMapper;
 using Microsoft.AspNetCore.Mvc;
+using SeguimientoGastosPersonales.Api.Response;
 using SeguimientoGastosPersonales.Core.DTOs;
+using SeguimientoGastosPersonales.Core.Entities;
+using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Services.Interfaces;
+using SeguimientoGastosPersonales.Services.Validators;
 
 namespace SeguimientoGastosPersonales.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     public class MovimientoController : ControllerBase
     {
         private readonly IMovimientoService _movimientoService;
-        private readonly IValidator<CrearGastoDto> _gastoValidator;
-        private readonly IValidator<CrearIngresoDto> _ingresoValidator;
-        private readonly IValidator<ActualizarMovimientoDto> _actualizarValidator;
+        private readonly IMapper _mapper;
+        private readonly CrearGastoDtoValidator _gastoValidator;
+        private readonly CrearIngresoDtoValidator _ingresoValidator;
+        private readonly ActualizarMovimientoDtoValidator _actualizarValidator;
 
         public MovimientoController(
+            IMapper mapper,
             IMovimientoService movimientoService,
-            IValidator<CrearGastoDto> gastoValidator,
-            IValidator<CrearIngresoDto> ingresoValidator,
-            IValidator<ActualizarMovimientoDto> actualizarValidator)
+            CrearGastoDtoValidator gastoValidator,
+            CrearIngresoDtoValidator ingresoValidator,
+            ActualizarMovimientoDtoValidator actualizarValidator)
         {
             _movimientoService = movimientoService;
+            _mapper = mapper;
             _gastoValidator = gastoValidator;
             _ingresoValidator = ingresoValidator;
             _actualizarValidator = actualizarValidator;
         }
 
+        #region Dto-AutoMapper
+
         // GET: api/Movimiento
         [HttpGet]
         public async Task<IActionResult> GetAllMovimientos()
         {
-            try
-            {
-                var movimientos =
-                    await _movimientoService.GetAllMovimientosAsync();
+            var movimientos =
+                await _movimientoService.GetAllMovimientosAsync();
 
-                return Ok(movimientos);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener los movimientos.",
-                    error = ex.Message
-                });
-            }
+            var movimientoDto =
+                _mapper.Map<IEnumerable<MovimientoDto>>(movimientos);
+
+            var response =
+                new ApiResponse<IEnumerable<MovimientoDto>>(movimientoDto);
+
+            return Ok(response);
         }
 
         // GET: api/Movimiento/5
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetMovimientoById(int id)
         {
-            try
-            {
-                var movimiento =
-                    await _movimientoService.GetMovimientoByIdAsync(id);
+            var movimiento =
+                await _movimientoService.GetMovimientoByIdAsync(id);
 
-                if (movimiento == null)
+            if (movimiento == null)
+                return NotFound(new
                 {
-                    return NotFound(new
-                    {
-                        message = "No se encontró el movimiento."
-                    });
-                }
-
-                return Ok(movimiento);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "Error al obtener el movimiento.",
-                    error = ex.Message
+                    message = "Movimiento no encontrado."
                 });
-            }
+
+            var movimientoDto =
+                _mapper.Map<MovimientoDto>(movimiento);
+
+            var response =
+                new ApiResponse<MovimientoDto>(movimientoDto);
+
+            return Ok(response);
         }
 
         // POST: api/Movimiento/gastos
@@ -91,34 +84,32 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             if (!validationResult.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Error de validación",
-                    errors = validationResult.Errors.Select(e => new
+                throw new BusinessException(
+                    message: "Error de validación",
+                    details: validationResult.Errors.Select(e => new
                     {
                         field = e.PropertyName,
                         error = e.ErrorMessage
-                    })
-                });
+                    }));
             }
 
             try
             {
-                var movimiento =
-                    await _movimientoService.RegistrarGastoAsync(gastoDto);
+                var movimiento = _mapper.Map<Movimiento>(gastoDto);
+
+                await _movimientoService.RegistrarGastoAsync(movimiento);
+
+                var resultDto =
+                    _mapper.Map<MovimientoDto>(movimiento);
 
                 return CreatedAtAction(
                     nameof(GetMovimientoById),
                     new { id = movimiento.Id },
-                    movimiento);
+                    resultDto);
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -140,34 +131,32 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
             if (!validationResult.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Error de validación",
-                    errors = validationResult.Errors.Select(e => new
+                throw new BusinessException(
+                    message: "Error de validación",
+                    details: validationResult.Errors.Select(e => new
                     {
                         field = e.PropertyName,
                         error = e.ErrorMessage
-                    })
-                });
+                    }));
             }
 
             try
             {
-                var movimiento =
-                    await _movimientoService.RegistrarIngresoAsync(ingresoDto);
+                var movimiento = _mapper.Map<Movimiento>(ingresoDto);
+
+                await _movimientoService.RegistrarIngresoAsync(movimiento);
+
+                var resultDto =
+                    _mapper.Map<MovimientoDto>(movimiento);
 
                 return CreatedAtAction(
                     nameof(GetMovimientoById),
                     new { id = movimiento.Id },
-                    movimiento);
+                    resultDto);
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -185,6 +174,12 @@ namespace SeguimientoGastosPersonales.API.Controllers
             int id,
             [FromBody] ActualizarMovimientoDto movimientoDto)
         {
+            if (id != movimientoDto.Id)
+                return BadRequest(new
+                {
+                    message = "El ID de la ruta no coincide con el ID del movimiento."
+                });
+
             var validationResult =
                 await _actualizarValidator.ValidateAsync(movimientoDto);
 
@@ -201,32 +196,37 @@ namespace SeguimientoGastosPersonales.API.Controllers
                 });
             }
 
+            var movimiento =
+                await _movimientoService.GetMovimientoByIdAsync(id);
+
+            if (movimiento == null)
+                return NotFound(new
+                {
+                    message = "Movimiento no encontrado."
+                });
+
             try
             {
+                _mapper.Map(movimientoDto, movimiento);
+
                 var actualizado =
                     await _movimientoService.ActualizarMovimientoAsync(
-                        id, movimientoDto);
+                        id, movimiento);
 
                 if (!actualizado)
-                {
                     return NotFound(new
                     {
-                        message = "No se encontró el movimiento."
+                        message = "Movimiento no encontrado."
                     });
-                }
 
-                return Ok(new
-                {
-                    message = "Movimiento actualizado correctamente."
-                });
+                var resultDto =
+                    _mapper.Map<MovimientoDto>(movimiento);
+
+                return Ok(resultDto);
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -243,35 +243,29 @@ namespace SeguimientoGastosPersonales.API.Controllers
         public async Task<IActionResult> EliminarMovimiento(int id)
         {
             if (id <= 0)
-            {
                 return BadRequest(new
                 {
                     message = "El ID debe ser mayor que cero."
                 });
-            }
+
+            var movimiento =
+                await _movimientoService.GetMovimientoByIdAsync(id);
+
+            if (movimiento == null)
+                return NotFound(new
+                {
+                    message = "Movimiento no encontrado."
+                });
 
             try
             {
-                var eliminado =
-                    await _movimientoService.EliminarMovimientoAsync(id);
-
-                if (!eliminado)
-                {
-                    return NotFound(new
-                    {
-                        message = "No se encontró el movimiento."
-                    });
-                }
+                await _movimientoService.EliminarMovimientoAsync(id);
 
                 return NoContent();
             }
-            catch (ArgumentException ex)
+            catch (BusinessException)
             {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Conflict(new { message = ex.Message });
+                throw;
             }
             catch (Exception ex)
             {
@@ -282,5 +276,7 @@ namespace SeguimientoGastosPersonales.API.Controllers
                 });
             }
         }
+
+        #endregion
     }
 }

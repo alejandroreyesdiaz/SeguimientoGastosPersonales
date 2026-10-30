@@ -4,9 +4,9 @@ using System.Text;
 
 namespace SeguimientoGastosPersonales.Core.Entities;
 
-public partial class Usuario
+public partial class Usuario : BaseEntity
 {
-    public int Id { get; set; }
+   // public int Id { get; set; }
     public string Nombre { get; set; } = null!;
     public string Email { get; set; } = null!;
     public string PasswordHash { get; set; } = null!;
