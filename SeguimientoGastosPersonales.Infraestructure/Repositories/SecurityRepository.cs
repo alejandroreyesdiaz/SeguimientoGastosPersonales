@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Interfaces;
-using SeguimientoGastosPersonales.Infraestructure.Data;
 using SeguimientoGastosPersonales.Infrastructure.Data;
 using SeguimientoGastosPersonales.Infrastructure.Repositories;
 

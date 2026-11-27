@@ -3,7 +3,9 @@ using System.Net;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Core.Interfaces;
+using SeguimientoGastosPersonales.Core.QueryFilters;
 using SeguimientoGastosPersonales.Services.Interfaces;
+using SeguimientoGastosPersonales.Core.DTOs;
 
 namespace SeguimientoGastosPersonales.Services.Services
 {
@@ -16,9 +18,33 @@ namespace SeguimientoGastosPersonales.Services.Services
             _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<Movimiento>> GetAllMovimientosAsync()
+        public async Task<IEnumerable<Movimiento>> GetAllMovimientosAsync(
+            MovimientoQueryFilter? filters = null)
         {
-            return await _unitOfWork.MovimientoRepository.GetAll();
+            var movimientos = await _unitOfWork.MovimientoRepository.GetAll();
+
+            if (filters != null)
+            {
+                if (filters.UsuarioId.HasValue)
+                    movimientos = movimientos.Where(m => m.UsuarioId == filters.UsuarioId.Value);
+
+                if (filters.CategoriaId.HasValue)
+                    movimientos = movimientos.Where(m => m.CategoriaId == filters.CategoriaId.Value);
+
+                if (!string.IsNullOrWhiteSpace(filters.Tipo))
+                    movimientos = movimientos.Where(m =>
+                        m.Tipo.Equals(filters.Tipo.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (filters.Fecha.HasValue)
+                    movimientos = movimientos.Where(m => m.Fecha == filters.Fecha.Value);
+
+                if (!string.IsNullOrWhiteSpace(filters.Descripcion))
+                    movimientos = movimientos.Where(m =>
+                        m.Descripcion != null &&
+                        m.Descripcion.Contains(filters.Descripcion.Trim(), StringComparison.OrdinalIgnoreCase));
+            }
+
+            return movimientos;
         }
 
         public async Task<Movimiento?> GetMovimientoByIdAsync(int id)
@@ -160,6 +186,34 @@ namespace SeguimientoGastosPersonales.Services.Services
             await _unitOfWork.SaveChangesAsync();
 
             return true;
+        }
+
+        public async Task<BalanceDto> ConsultarBalanceAsync(int? usuarioId = null)
+        {
+            var movimientos = await _unitOfWork.MovimientoRepository.GetAll();
+
+            if (usuarioId.HasValue)
+                movimientos = movimientos.Where(m => m.UsuarioId == usuarioId.Value);
+
+            if (!movimientos.Any())
+                throw new BusinessException(
+                    "No hay información suficiente para calcular el balance.",
+                    HttpStatusCode.NotFound);
+
+            var totalIngresos = movimientos
+                .Where(m => m.Tipo == "INGRESO")
+                .Sum(m => m.Importe);
+
+            var totalGastos = movimientos
+                .Where(m => m.Tipo == "GASTO")
+                .Sum(m => m.Importe);
+
+            return new BalanceDto
+            {
+                TotalIngresos = totalIngresos,
+                TotalGastos = totalGastos,
+                BalanceTotal = totalIngresos - totalGastos
+            };
         }
     }
 }

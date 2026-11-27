@@ -7,9 +7,11 @@ using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Services.Interfaces;
 using SeguimientoGastosPersonales.Services.Validators;
+using Microsoft.AspNetCore.Authorization;
 
 namespace SeguimientoGastosPersonales.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class CategoriaController : ControllerBase

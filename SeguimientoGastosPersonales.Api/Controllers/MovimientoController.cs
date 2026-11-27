@@ -7,9 +7,12 @@ using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Services.Interfaces;
 using SeguimientoGastosPersonales.Services.Validators;
+using Microsoft.AspNetCore.Authorization;
+using SeguimientoGastosPersonales.Core.QueryFilters;
 
 namespace SeguimientoGastosPersonales.API.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class MovimientoController : ControllerBase
@@ -38,10 +41,11 @@ namespace SeguimientoGastosPersonales.API.Controllers
 
         // GET: api/Movimiento
         [HttpGet]
-        public async Task<IActionResult> GetAllMovimientos()
+        public async Task<IActionResult> GetAllMovimientos(
+          [FromQuery] MovimientoQueryFilter? filters)
         {
             var movimientos =
-                await _movimientoService.GetAllMovimientosAsync();
+                await _movimientoService.GetAllMovimientosAsync(filters);
 
             var movimientoDto =
                 _mapper.Map<IEnumerable<MovimientoDto>>(movimientos);
@@ -275,6 +279,15 @@ namespace SeguimientoGastosPersonales.API.Controllers
                     error = ex.Message
                 });
             }
+        }
+
+        // GET: api/Movimiento/balance  o  api/Movimiento/balance?usuarioId=1
+        [HttpGet("balance")]
+        public async Task<IActionResult> ConsultarBalance([FromQuery] int? usuarioId = null)
+        {
+            var balance = await _movimientoService.ConsultarBalanceAsync(usuarioId);
+            var response = new ApiResponse<BalanceDto>(balance);
+            return Ok(response);
         }
 
         #endregion

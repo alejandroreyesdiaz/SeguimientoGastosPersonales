@@ -1,9 +1,10 @@
-using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SeguimientoGastosPersonales.Core.Entities;
+using SeguimientoGastosPersonales.Core.Interfaces;
 using SeguimientoGastosPersonales.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
+using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Text;
 
@@ -15,11 +16,25 @@ namespace SeguimientoGastosPersonales.Api.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ISecurityService _securityService;
+        private readonly IPasswordService _passwordService;
 
-        public TokenController(IConfiguration configuration, ISecurityService securityService)
+        public TokenController(
+            IConfiguration configuration,
+            ISecurityService securityService,
+            IPasswordService passwordService)
         {
             _configuration = configuration;
             _securityService = securityService;
+            _passwordService = passwordService;
+        }
+
+        private async Task<(bool, Security?)> IsValidUser(UserLogin login)
+        {
+            var user = await _securityService.GetLoginByCredentials(login);
+            if (user == null) return (false, null);
+
+            bool isValid = _passwordService.Check(user.Password, login.Password);
+            return (isValid, user);
         }
 
         [HttpPost]
@@ -32,15 +47,6 @@ namespace SeguimientoGastosPersonales.Api.Controllers
                 return Ok(new { token });
             }
             return NotFound("Credenciales inválidas");
-        }
-
-        private async Task<(bool, Security?)> IsValidUser(UserLogin login)
-        {
-            var user = await _securityService.GetLoginByCredentials(login);
-            if (user == null) return (false, null);
-
-            bool isValid = user.Password == login.Password;
-            return (isValid, user);
         }
 
         private string GenerateToken(Security security)
@@ -61,7 +67,7 @@ namespace SeguimientoGastosPersonales.Api.Controllers
                 _configuration["Authentication:Issuer"],
                 _configuration["Authentication:Audience"],
                 claims,
-                DateTime.Now,
+                DateTime.UtcNow,
                 DateTime.UtcNow.AddMinutes(60)
             );
 

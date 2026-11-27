@@ -1,16 +1,20 @@
 
 using AutoMapper;
+using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using SeguimientoGastosPersonales.Api.Filters;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Interfaces;
-using SeguimientoGastosPersonales.Infrastructure.Repositories;
 using SeguimientoGastosPersonales.Infrastructure.Data;
-using SeguimientoGastosPersonales.Services.Services;
+using SeguimientoGastosPersonales.Infrastructure.Repositories;
 using SeguimientoGastosPersonales.Services.Interfaces;
-using FluentValidation;
+using SeguimientoGastosPersonales.Services.Services;
 using SeguimientoGastosPersonales.Services.Validators;
-using SeguimientoGastosPersonales.Api.Filters;
+using SeguimientoGastosPersonales.Core.CustomEntities;
+using System.Text;
 
 namespace SeguimientoGastosPersonales.Api
 {
@@ -59,6 +63,38 @@ namespace SeguimientoGastosPersonales.Api
             // Registrar validadores de FluentValidation
             builder.Services.AddValidatorsFromAssemblyContaining<CrearUsuarioDtoValidator>();
 
+            builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+            builder.Services.AddScoped<IDapperContext, DapperContext>();
+
+            builder.Services.AddScoped<ISecurityService, SecurityService>();
+            builder.Services.AddScoped<IReportesService, ReportesService>();
+            builder.Services.AddScoped<IReportesRepository, ReportesRepository>();
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = builder.Configuration["Authentication:Issuer"],
+                    ValidAudience = builder.Configuration["Authentication:Audience"],
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(builder.Configuration["Authentication:SecretKey"]!))
+                };
+            });
+
+            builder.Services.Configure<SeguimientoGastosPersonales.Core.CustomEntities.PasswordOptions>(
+            builder.Configuration.GetSection("PasswordOptions"));
+
+            builder.Services.AddSingleton<IPasswordService, PasswordService>();
+
             var app = builder.Build();
 
             app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -69,6 +105,8 @@ namespace SeguimientoGastosPersonales.Api
             }
 
             app.UseHttpsRedirection();
+
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

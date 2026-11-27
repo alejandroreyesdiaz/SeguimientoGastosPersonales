@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Interfaces;
 using SeguimientoGastosPersonales.Infrastructure.Data;
+using SeguimientoGastosPersonales.Infraestructure.Repositories;
 using System.Data;
 
 namespace SeguimientoGastosPersonales.Infrastructure.Repositories
@@ -15,7 +16,8 @@ namespace SeguimientoGastosPersonales.Infrastructure.Repositories
         private readonly IBaseRepository<Categoria>? _categoriaRepository;
         private readonly IBaseRepository<Usuario>? _usuarioRepository;
         private readonly IBaseRepository<Movimiento>? _movimientoRepository;
-
+        private readonly ISecurityRepository? _securityRepository;
+        private readonly IReportesRepository? _reportesRepository;
         // Dapper
         private readonly IDapperContext _dapper;
         private IDbContextTransaction? _efTransaction;
@@ -39,6 +41,12 @@ namespace SeguimientoGastosPersonales.Infrastructure.Repositories
         public IBaseRepository<Movimiento> MovimientoRepository =>
             _movimientoRepository ??
             new BaseRepository<Movimiento>(_context);
+
+        public ISecurityRepository SecurityRepository =>
+             _securityRepository ?? new SecurityRepository(_context);
+
+        public IReportesRepository ReportesRepository =>
+            _reportesRepository ?? new ReportesRepository(_dapper);
 
         public void Dispose()
         {
