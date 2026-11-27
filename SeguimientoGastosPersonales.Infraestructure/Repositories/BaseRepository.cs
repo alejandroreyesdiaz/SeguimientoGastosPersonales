@@ -1,10 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿
 using Microsoft.EntityFrameworkCore;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Interfaces;
 using SeguimientoGastosPersonales.Infrastructure.Data;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace SeguimientoGastosPersonales.Infrastructure.Repositories
 {
@@ -12,7 +13,7 @@ namespace SeguimientoGastosPersonales.Infrastructure.Repositories
         where T : BaseEntity
     {
         private readonly SeguimientoGastosPersonalesContext _context;
-        private readonly DbSet<T> _entities;
+        protected readonly DbSet<T> _entities;
 
         public BaseRepository(SeguimientoGastosPersonalesContext context)
         {
@@ -33,21 +34,20 @@ namespace SeguimientoGastosPersonales.Infrastructure.Repositories
         public async Task Add(T entity)
         {
             _entities.Add(entity);
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
         }
 
         public async Task Update(T entity)
         {
             _entities.Update(entity);
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
         }
 
         public async Task Delete(int id)
         {
             T entity = await GetById(id);
             _entities.Remove(entity);
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
         }
     }
 }
-

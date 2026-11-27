@@ -1,4 +1,5 @@
-﻿using SeguimientoGastosPersonales.Core.Entities;
+﻿
+using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Core.Interfaces;
 using SeguimientoGastosPersonales.Services.Interfaces;
@@ -7,20 +8,16 @@ namespace SeguimientoGastosPersonales.Services.Services
 {
     public class CategoriaService : ICategoriaService
     {
-        private readonly IBaseRepository<Categoria> _categoriaRepository;
-        private readonly IBaseRepository<Movimiento> _movimientoRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public CategoriaService(
-            IBaseRepository<Categoria> categoriaRepository,
-            IBaseRepository<Movimiento> movimientoRepository)
+        public CategoriaService(IUnitOfWork unitOfWork)
         {
-            _categoriaRepository = categoriaRepository;
-            _movimientoRepository = movimientoRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<IEnumerable<Categoria>> GetAllCategoriasAsync()
         {
-            return await _categoriaRepository.GetAll();
+            return await _unitOfWork.CategoriaRepository.GetAll();
         }
 
         public async Task<Categoria?> GetCategoriaByIdAsync(int id)
@@ -29,14 +26,15 @@ namespace SeguimientoGastosPersonales.Services.Services
                 throw new BusinessException(
                     "El ID de la categoría debe ser mayor que cero.");
 
-            return await _categoriaRepository.GetById(id);
+            return await _unitOfWork.CategoriaRepository.GetById(id);
         }
 
         public async Task<Categoria> CrearCategoriaAsync(Categoria categoria)
         {
             ValidarCategoria(categoria.Nombre, categoria.Tipo);
 
-            var categorias = await _categoriaRepository.GetAll();
+            var categorias =
+                await _unitOfWork.CategoriaRepository.GetAll();
 
             if (categorias.Any(c =>
                 string.Equals(
@@ -51,7 +49,8 @@ namespace SeguimientoGastosPersonales.Services.Services
 
             categoria.Nombre = categoria.Nombre.Trim();
 
-            await _categoriaRepository.Add(categoria);
+            await _unitOfWork.CategoriaRepository.Add(categoria);
+            await _unitOfWork.SaveChangesAsync();
 
             return categoria;
         }
@@ -70,12 +69,13 @@ namespace SeguimientoGastosPersonales.Services.Services
             ValidarCategoria(categoria.Nombre, categoria.Tipo);
 
             var categoriaExistente =
-                await _categoriaRepository.GetById(id);
+                await _unitOfWork.CategoriaRepository.GetById(id);
 
             if (categoriaExistente == null)
                 return false;
 
-            var categorias = await _categoriaRepository.GetAll();
+            var categorias =
+                await _unitOfWork.CategoriaRepository.GetAll();
 
             if (categorias.Any(c =>
                 c.Id != id &&
@@ -92,7 +92,8 @@ namespace SeguimientoGastosPersonales.Services.Services
             categoriaExistente.Nombre = categoria.Nombre.Trim();
             categoriaExistente.Tipo = categoria.Tipo;
 
-            await _categoriaRepository.Update(categoriaExistente);
+            await _unitOfWork.CategoriaRepository.Update(categoriaExistente);
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
@@ -103,19 +104,22 @@ namespace SeguimientoGastosPersonales.Services.Services
                 throw new BusinessException(
                     "El ID de la categoría debe ser mayor que cero.");
 
-            var categoria = await _categoriaRepository.GetById(id);
+            var categoria =
+                await _unitOfWork.CategoriaRepository.GetById(id);
 
             if (categoria == null)
                 return false;
 
-            var movimientos = await _movimientoRepository.GetAll();
+            var movimientos =
+                await _unitOfWork.MovimientoRepository.GetAll();
 
             if (movimientos.Any(m => m.CategoriaId == id))
                 throw new BusinessException(
                     "No se puede eliminar la categoría porque tiene movimientos registrados.",
                     System.Net.HttpStatusCode.Conflict);
 
-            await _categoriaRepository.Delete(id);
+            await _unitOfWork.CategoriaRepository.Delete(id);
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }

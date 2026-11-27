@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿
+using System.Net;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Core.Interfaces;
@@ -8,28 +9,21 @@ namespace SeguimientoGastosPersonales.Services.Services
 {
     public class MovimientoService : IMovimientoService
     {
-        public readonly IBaseRepository<Movimiento> _movimientoRepository;
-        public readonly IBaseRepository<Usuario> _usuarioRepository;
-        public readonly IBaseRepository<Categoria> _categoriaRepository;
+        public readonly IUnitOfWork _unitOfWork;
 
-        public MovimientoService(
-            IBaseRepository<Movimiento> movimientoRepository,
-            IBaseRepository<Usuario> usuarioRepository,
-            IBaseRepository<Categoria> categoriaRepository)
+        public MovimientoService(IUnitOfWork unitOfWork)
         {
-            _movimientoRepository = movimientoRepository;
-            _usuarioRepository = usuarioRepository;
-            _categoriaRepository = categoriaRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public async Task<IEnumerable<Movimiento>> GetAllMovimientosAsync()
         {
-            return await _movimientoRepository.GetAll();
+            return await _unitOfWork.MovimientoRepository.GetAll();
         }
 
         public async Task<Movimiento?> GetMovimientoByIdAsync(int id)
         {
-            return await _movimientoRepository.GetById(id);
+            return await _unitOfWork.MovimientoRepository.GetById(id);
         }
 
         public async Task RegistrarGastoAsync(Movimiento movimiento)
@@ -59,7 +53,8 @@ namespace SeguimientoGastosPersonales.Services.Services
                     "La fecha no puede ser futura.");
 
             var usuario =
-                await _usuarioRepository.GetById(movimiento.UsuarioId);
+                await _unitOfWork.UsuarioRepository.GetById(
+                    movimiento.UsuarioId);
 
             if (usuario == null)
                 throw new BusinessException(
@@ -67,7 +62,8 @@ namespace SeguimientoGastosPersonales.Services.Services
                     HttpStatusCode.NotFound);
 
             var categoria =
-                await _categoriaRepository.GetById(movimiento.CategoriaId);
+                await _unitOfWork.CategoriaRepository.GetById(
+                    movimiento.CategoriaId);
 
             if (categoria == null)
                 throw new BusinessException(
@@ -80,7 +76,8 @@ namespace SeguimientoGastosPersonales.Services.Services
 
             movimiento.Tipo = tipoEsperado;
 
-            await _movimientoRepository.Add(movimiento);
+            await _unitOfWork.MovimientoRepository.Add(movimiento);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task<bool> ActualizarMovimientoAsync(
@@ -88,7 +85,7 @@ namespace SeguimientoGastosPersonales.Services.Services
             Movimiento movimiento)
         {
             var movimientoExistente =
-                await _movimientoRepository.GetById(id);
+                await _unitOfWork.MovimientoRepository.GetById(id);
 
             if (movimientoExistente == null)
                 return false;
@@ -111,7 +108,8 @@ namespace SeguimientoGastosPersonales.Services.Services
                     "El tipo debe ser INGRESO o GASTO.");
 
             var usuario =
-                await _usuarioRepository.GetById(movimiento.UsuarioId);
+                await _unitOfWork.UsuarioRepository.GetById(
+                    movimiento.UsuarioId);
 
             if (usuario == null)
                 throw new BusinessException(
@@ -119,7 +117,8 @@ namespace SeguimientoGastosPersonales.Services.Services
                     HttpStatusCode.NotFound);
 
             var categoria =
-                await _categoriaRepository.GetById(movimiento.CategoriaId);
+                await _unitOfWork.CategoriaRepository.GetById(
+                    movimiento.CategoriaId);
 
             if (categoria == null)
                 throw new BusinessException(
@@ -137,7 +136,10 @@ namespace SeguimientoGastosPersonales.Services.Services
             movimientoExistente.Importe = movimiento.Importe;
             movimientoExistente.Fecha = movimiento.Fecha;
 
-            await _movimientoRepository.Update(movimientoExistente);
+            await _unitOfWork.MovimientoRepository.Update(
+                movimientoExistente);
+
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
@@ -145,7 +147,7 @@ namespace SeguimientoGastosPersonales.Services.Services
         public async Task<bool> EliminarMovimientoAsync(int id)
         {
             var movimiento =
-                await _movimientoRepository.GetById(id);
+                await _unitOfWork.MovimientoRepository.GetById(id);
 
             if (movimiento == null)
                 return false;
@@ -154,7 +156,8 @@ namespace SeguimientoGastosPersonales.Services.Services
                 throw new BusinessException(
                     "El ID del movimiento no coincide con el ID indicado.");
 
-            await _movimientoRepository.Delete(id);
+            await _unitOfWork.MovimientoRepository.Delete(id);
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }

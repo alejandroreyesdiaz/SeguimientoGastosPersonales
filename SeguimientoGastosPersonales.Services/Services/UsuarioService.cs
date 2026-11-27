@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿
+using Microsoft.AspNetCore.Identity;
 using SeguimientoGastosPersonales.Core.Entities;
 using SeguimientoGastosPersonales.Core.Exceptions;
 using SeguimientoGastosPersonales.Core.Interfaces;
@@ -9,23 +10,20 @@ namespace SeguimientoGastosPersonales.Services.Services
 {
     public class UsuarioService : IUsuarioService
     {
-        private readonly IBaseRepository<Usuario> _usuarioRepository;
-        private readonly IBaseRepository<Movimiento> _movimientoRepository;
+        public readonly IUnitOfWork _unitOfWork;
         private readonly IPasswordHasher<Usuario> _passwordHasher;
 
         public UsuarioService(
-            IBaseRepository<Usuario> usuarioRepository,
-            IBaseRepository<Movimiento> movimientoRepository,
+            IUnitOfWork unitOfWork,
             IPasswordHasher<Usuario> passwordHasher)
         {
-            _usuarioRepository = usuarioRepository;
-            _movimientoRepository = movimientoRepository;
+            _unitOfWork = unitOfWork;
             _passwordHasher = passwordHasher;
         }
 
         public async Task<IEnumerable<Usuario>> GetAllUsuariosAsync()
         {
-            return await _usuarioRepository.GetAll();
+            return await _unitOfWork.UsuarioRepository.GetAll();
         }
 
         public async Task<Usuario?> GetUsuarioByIdAsync(int id)
@@ -34,7 +32,7 @@ namespace SeguimientoGastosPersonales.Services.Services
                 throw new BusinessException(
                     "El ID del usuario debe ser mayor que cero.");
 
-            return await _usuarioRepository.GetById(id);
+            return await _unitOfWork.UsuarioRepository.GetById(id);
         }
 
         public async Task<Usuario> CrearUsuarioAsync(Usuario usuario)
@@ -51,7 +49,7 @@ namespace SeguimientoGastosPersonales.Services.Services
 
             var password = usuario.PasswordHash;
 
-            var usuarios = await _usuarioRepository.GetAll();
+            var usuarios = await _unitOfWork.UsuarioRepository.GetAll();
 
             if (usuarios.Any(u =>
                 string.Equals(
@@ -69,7 +67,8 @@ namespace SeguimientoGastosPersonales.Services.Services
             usuario.PasswordHash =
                 _passwordHasher.HashPassword(usuario, password);
 
-            await _usuarioRepository.Add(usuario);
+            await _unitOfWork.UsuarioRepository.Add(usuario);
+            await _unitOfWork.SaveChangesAsync();
 
             return usuario;
         }
@@ -89,12 +88,12 @@ namespace SeguimientoGastosPersonales.Services.Services
             ValidarEmail(usuario.Email);
 
             var usuarioExistente =
-                await _usuarioRepository.GetById(id);
+                await _unitOfWork.UsuarioRepository.GetById(id);
 
             if (usuarioExistente == null)
                 return false;
 
-            var usuarios = await _usuarioRepository.GetAll();
+            var usuarios = await _unitOfWork.UsuarioRepository.GetAll();
 
             if (usuarios.Any(u =>
                 u.Id != id &&
@@ -110,7 +109,8 @@ namespace SeguimientoGastosPersonales.Services.Services
             usuarioExistente.Nombre = usuario.Nombre.Trim();
             usuarioExistente.Email = usuario.Email.Trim();
 
-            await _usuarioRepository.Update(usuarioExistente);
+            await _unitOfWork.UsuarioRepository.Update(usuarioExistente);
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
@@ -121,19 +121,21 @@ namespace SeguimientoGastosPersonales.Services.Services
                 throw new BusinessException(
                     "El ID del usuario debe ser mayor que cero.");
 
-            var usuario = await _usuarioRepository.GetById(id);
+            var usuario = await _unitOfWork.UsuarioRepository.GetById(id);
 
             if (usuario == null)
                 return false;
 
-            var movimientos = await _movimientoRepository.GetAll();
+            var movimientos =
+                await _unitOfWork.MovimientoRepository.GetAll();
 
             if (movimientos.Any(m => m.UsuarioId == id))
                 throw new BusinessException(
                     "No se puede eliminar el usuario porque tiene movimientos registrados.",
                     System.Net.HttpStatusCode.Conflict);
 
-            await _usuarioRepository.Delete(id);
+            await _unitOfWork.UsuarioRepository.Delete(id);
+            await _unitOfWork.SaveChangesAsync();
 
             return true;
         }
