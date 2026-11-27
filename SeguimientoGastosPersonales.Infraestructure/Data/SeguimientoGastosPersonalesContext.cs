@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SeguimientoGastosPersonales.Core.Entities;
+using SeguimientoGastosPersonales.Infraestructure.Data.Configurations;
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using System.Text;
 
 namespace SeguimientoGastosPersonales.Infrastructure.Data
 {
@@ -19,6 +20,10 @@ namespace SeguimientoGastosPersonales.Infrastructure.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+            modelBuilder.ApplyConfiguration(new SecurityConfiguration());
         }
+        public virtual DbSet<Security> Securities { get; set; }
+
+       
     }
 }
