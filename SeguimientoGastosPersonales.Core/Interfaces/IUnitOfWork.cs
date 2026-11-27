@@ -20,5 +20,8 @@ namespace SeguimientoGastosPersonales.Core.Interfaces
 
         IDbConnection? GetDbConnection();
         IDbTransaction? GetDbTransaction();
+
+        ISecurityRepository SecurityRepository { get; }
+       // IReportesRepository ReportesRepository { get; }
     }
 }
